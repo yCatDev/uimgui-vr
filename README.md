@@ -2,7 +2,7 @@
 
 This is a fork of [psydack/uimgui](https://github.com/charlietran/uimgui) with updates for Unity 6's Render Graph and MacOS / Apple Silicon support. To use this with Unity 6 and URP / Render Graph:
 
-1. Add the UImGui component to your scene and tick the box for "Urp Render Graph Bypass"
+1. Add the UImGui component to your scene and tick the box for "Urp Render Graph Bypass". Set the Renderer Type to Mesh or some things like dropdown menus will not render correctly.
 2. _Do not_ add the ImGui Render Feature to your pipeline as normally instructed
 
 UImGui should now be rendering. This bypass works by hooking into `OnEndCameraRendering` from the MonoBehaviour instead of using a Scriptable Render Feature: [UImGui.cs](https://github.com/charlietran/uimgui/blob/ct-updates/Source/UImGui.cs#L301-L318)
