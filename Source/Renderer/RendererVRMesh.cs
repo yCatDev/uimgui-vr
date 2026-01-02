@@ -38,17 +38,15 @@ namespace UImGui.Renderer
         private readonly Shader _shader;
         private readonly int _textureID;
         private readonly TextureManager _textureManager;
-        private readonly MaterialPropertyBlock _materialProperties;
-
-        private int _prevSubMeshCount = 1; // number of sub meshes used previously
         
+        private int _prevSubMeshCount = 1; // number of sub meshes used previously
+
 
         public RendererVRMesh(ShaderResourcesAsset resources, TextureManager texManager)
         {
             _shader = resources.Shader.Mesh;
             _textureManager = texManager;
             _textureID = Shader.PropertyToID(resources.PropertyNames.Texture);
-            _materialProperties = new MaterialPropertyBlock();
         }
 
         public void Initialize(ImGuiIOPtr io)
@@ -86,7 +84,7 @@ namespace UImGui.Renderer
             }
         }
 
-        public void RenderDrawLists(CommandBuffer commandBuffer, ImDrawDataPtr drawData)
+        public void RenderDrawLists(List<DrawCommand> commands, ImDrawDataPtr drawData)
         {
             Vector2 fbOSize = drawData.DisplaySize * drawData.FramebufferScale;
 
@@ -94,18 +92,28 @@ namespace UImGui.Renderer
             if (fbOSize.x <= 0f || fbOSize.y <= 0f || drawData.TotalVtxCount == 0) return;
 
             UImGuiUtility.VRContext.WorldSpaceTransformer.Update();
-            
+
             Constants.UpdateMeshMarker.Begin();
             UpdateMesh(drawData);
             Constants.UpdateMeshMarker.End();
 
-            commandBuffer.BeginSample(Constants.ExecuteDrawCommandsMarker);
+            //commandBuffer.BeginSample(Constants.ExecuteDrawCommandsMarker);
+            commands.Add(new DrawCommand()
+            {
+                type = DrawCommandType.BeginSample,
+                stringData = Constants.ExecuteDrawCommandsMarker
+            });
             Constants.CreateDrawCommandsMarker.Begin();
 
-            CreateDrawCommands(commandBuffer, drawData, fbOSize);
+            CreateDrawCommands(commands, drawData, fbOSize);
 
             Constants.CreateDrawCommandsMarker.End();
-            commandBuffer.EndSample(Constants.ExecuteDrawCommandsMarker);
+            commands.Add(new DrawCommand()
+            {
+                type = DrawCommandType.EndSample,
+                stringData = Constants.ExecuteDrawCommandsMarker
+            });
+            //commandBuffer.EndSample(Constants.ExecuteDrawCommandsMarker);
         }
 
         private void UpdateMesh(ImDrawDataPtr drawData)
@@ -178,20 +186,30 @@ namespace UImGui.Renderer
             _mesh.UploadMeshData(false);
         }
 
-        private void CreateDrawCommands(CommandBuffer commandBuffer, ImDrawDataPtr drawData, Vector2 fbSize)
+        private void CreateDrawCommands(List<DrawCommand> commands, ImDrawDataPtr drawData, Vector2 fbSize)
         {
             IntPtr prevTextureId = IntPtr.Zero;
             Vector4 clipOffset = new Vector4(drawData.DisplayPos.x, drawData.DisplayPos.y,
                 drawData.DisplayPos.x, drawData.DisplayPos.y);
             Vector4 clipScale = new Vector4(drawData.FramebufferScale.x, drawData.FramebufferScale.y,
                 drawData.FramebufferScale.x, drawData.FramebufferScale.y);
-            
+
 
             int subOf = 0;
-            
-            commandBuffer.ClearRenderTarget(true, false, Color.clear);
-            commandBuffer.DrawRenderer(UImGuiUtility.VRContext.VRManipulator.TintSphere, UImGuiUtility.VRContext.VRManipulator.TintSphere.sharedMaterial);
-            
+
+            //commandBuffer.ClearRenderTarget(true, false, Color.clear);
+            commands.Add(new DrawCommand()
+            {
+                type = DrawCommandType.ClearDepth
+            });
+            commands.Add(new DrawCommand()
+            {
+                type = DrawCommandType.DrawRenderer,
+                renderer = UImGuiUtility.VRContext.VRManipulator.TintSphere,
+                materialData = UImGuiUtility.VRContext.VRManipulator.TintSphere.sharedMaterial
+            });
+            //commandBuffer.DrawRenderer(UImGuiUtility.VRContext.VRManipulator.TintSphere, UImGuiUtility.VRContext.VRManipulator.TintSphere.sharedMaterial);
+
             for (int n = 0, nMax = drawData.CmdListsCount; n < nMax; ++n)
             {
                 ImDrawListPtr drawList = drawData.CmdLists[n];
@@ -222,15 +240,41 @@ namespace UImGui.Renderer
                             Assert.IsTrue(hasTexture,
                                 $"Texture {prevTextureId} does not exist. Try to use UImGuiUtility.GetTextureID().");
 
-                            _materialProperties.SetTexture(_textureID, texture);
+                            commands.Add(new DrawCommand()
+                            {
+                                type = DrawCommandType.SetGlobalTexture,
+                                propertyId = _textureID,
+                                textureData = texture
+                            });
+                            //_materialProperties.SetTexture(_textureID, texture);
                         }
 
                         var rect = new Rect(clip.x, fbSize.y - clip.w, clip.z - clip.x, clip.w - clip.y);
-                        
-                        commandBuffer.SetGlobalVector("_ClipRectMin", rect.min);
-                        commandBuffer.SetGlobalVector("_ClipRectMax", rect.max);
-                        
-                        commandBuffer.DrawMesh(_mesh, UImGuiUtility.VRContext.WorldSpaceTransformer.LocalToWorldMatrix, _material, subOf, -1, _materialProperties);
+
+                        commands.Add(new DrawCommand()
+                        {
+                            type = DrawCommandType.SetGlobalVector,
+                            propertyId = Shader.PropertyToID("_ClipRectMin"),
+                            vectorData = rect.min
+                        });
+                        commands.Add(new DrawCommand()
+                        {
+                            type = DrawCommandType.SetGlobalVector,
+                            propertyId = Shader.PropertyToID("_ClipRectMax"),
+                            vectorData = rect.max
+                        });
+                        //commandBuffer.SetGlobalVector("_ClipRectMin", rect.min);
+                        //commandBuffer.SetGlobalVector("_ClipRectMax", rect.max);
+
+                        //commandBuffer.DrawMesh(_mesh, UImGuiUtility.VRContext.WorldSpaceTransformer.LocalToWorldMatrix, _material, subOf, -1, _materialProperties);
+                        commands.Add(new DrawCommand()
+                        {
+                            type = DrawCommandType.DrawMesh,
+                            meshData = _mesh,
+                            matrixA = UImGuiUtility.VRContext.WorldSpaceTransformer.LocalToWorldMatrix,
+                            materialData = _material,
+                            intData = subOf,
+                        });
                     }
                 }
             }
@@ -241,11 +285,16 @@ namespace UImGui.Renderer
                 for (var i = 0; i < renderer.sharedMaterials.Length; i++)
                 {
                     var material = renderer.sharedMaterials[i];
-                    commandBuffer.DrawRenderer(renderer, material, i);
+                    //commandBuffer.DrawRenderer(renderer, material, i);
+                    commands.Add(new DrawCommand()
+                    {
+                        type = DrawCommandType.DrawRenderer,
+                        renderer = renderer,
+                        materialData = material,
+                        intData = i
+                    });
                 }
             }
-            
-            //commandBuffer.DisableScissorRect();
         }
     }
 }

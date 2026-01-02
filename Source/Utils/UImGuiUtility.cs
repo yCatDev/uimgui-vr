@@ -1,5 +1,7 @@
 ﻿using ImGuiNET;
 using System;
+using System.Collections.Generic;
+using UImGui.Renderer;
 using UImGui.Texture;
 using UImGui.VR;
 using UnityEngine;
@@ -35,7 +37,8 @@ namespace UImGui
 #if !UIMGUI_REMOVE_IMNODES
 				ImNodesContext = new IntPtr(imnodesNET.imnodes.CreateContext()),
 #endif
-				TextureManager = new TextureManager()
+				TextureManager = new TextureManager(),
+				DrawCommands = new List<DrawCommand>(32)
 			};
 		}
 		

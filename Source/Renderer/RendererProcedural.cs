@@ -1,5 +1,6 @@
 ﻿using ImGuiNET;
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UImGui.Assets;
 using UImGui.Texture;
@@ -28,8 +29,6 @@ namespace UImGui.Renderer
 		private readonly int _verticesID;
 		private readonly int _baseVertexID;
 		private readonly TextureManager _textureManager;
-
-		private readonly MaterialPropertyBlock _materialProperties = new MaterialPropertyBlock();
 
 		private Material _material;
 
@@ -73,7 +72,7 @@ namespace UImGui.Renderer
 			_argumentsBuffer?.Release(); _argumentsBuffer = null;
 		}
 
-		public void RenderDrawLists(CommandBuffer cmd, ImDrawDataPtr drawData)
+		public void RenderDrawLists(List<DrawCommand> commands, ImDrawDataPtr drawData)
 		{
 			Vector2 fbSize = drawData.DisplaySize * drawData.FramebufferScale;
 
@@ -84,13 +83,23 @@ namespace UImGui.Renderer
 			UpdateBuffers(drawData);
 			Constants.UpdateBuffersMarker.End();
 
-			cmd.BeginSample(Constants.ExecuteDrawCommandsMarker);
-
+			//cmd.BeginSample(Constants.ExecuteDrawCommandsMarker);
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.BeginSample,
+				stringData = Constants.ExecuteDrawCommandsMarker
+			});
+			
 			Constants.CreateDrawComandsMarker.Begin();
-			CreateDrawCommands(cmd, drawData, fbSize);
+			CreateDrawCommands(commands, drawData, fbSize);
 			Constants.CreateDrawComandsMarker.End();
 
-			cmd.EndSample(Constants.ExecuteDrawCommandsMarker);
+			//cmd.EndSample(Constants.ExecuteDrawCommandsMarker);
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.EndSample,
+				stringData = Constants.ExecuteDrawCommandsMarker
+			});
 		}
 
 		private void CreateOrResizeVtxBuffer(ref ComputeBuffer buffer, int count)
@@ -189,7 +198,7 @@ namespace UImGui.Renderer
 			}
 		}
 
-		private void CreateDrawCommands(CommandBuffer cmd, ImDrawDataPtr drawData, Vector2 fbSize)
+		private void CreateDrawCommands(List<DrawCommand> commands, ImDrawDataPtr drawData, Vector2 fbSize)
 		{
 			IntPtr prevTextureId = IntPtr.Zero;
 			Vector4 clipOffst = new Vector4(drawData.DisplayPos.x, drawData.DisplayPos.y,
@@ -199,10 +208,17 @@ namespace UImGui.Renderer
 
 			_material.SetBuffer(_verticesID, _vertexBuffer); // Bind vertex buffer.
 
-			cmd.SetViewport(new Rect(0f, 0f, fbSize.x, fbSize.y));
-			cmd.SetViewProjectionMatrices(
-				Matrix4x4.Translate(new Vector3(0.5f / fbSize.x, 0.5f / fbSize.y, 0f)), // Small adjustment to improve text.
-				Matrix4x4.Ortho(0f, fbSize.x, fbSize.y, 0f, 0f, 1f));
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.SetViewport,
+				vectorData = new Vector4(0f, 0f, fbSize.x, fbSize.y)
+			});
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.SetViewProjectionMatrices,
+				matrixA = Matrix4x4.Translate(new Vector3(0.5f / fbSize.x, 0.5f / fbSize.y, 0f)), // Small adjustment to improve text.
+				matrixB = Matrix4x4.Ortho(0f, fbSize.x, fbSize.y, 0f, 0f, 1f)
+			});
 
 			int vtxOf = 0;
 			int argOf = 0;
@@ -233,20 +249,49 @@ namespace UImGui.Renderer
 							bool hasTexture = _textureManager.TryGetTexture(prevTextureId, out UnityEngine.Texture texture);
 							Assert.IsTrue(hasTexture, $"Texture {prevTextureId} does not exist. Try to use UImGuiUtility.GetTextureID().");
 
-							_materialProperties.SetTexture(_textureID, texture);
+							commands.Add(new DrawCommand()
+							{
+								type = DrawCommandType.SetGlobalTexture,
+								propertyId = _textureID,
+								textureData = texture
+							});
 						}
 
 						// Base vertex location not automatically added to SV_VertexID.
-						_materialProperties.SetInt(_baseVertexID, vtxOf + (int)drawCmd.VtxOffset);
+						//_materialProperties.SetInt(_baseVertexID, vtxOf + (int)drawCmd.VtxOffset);
+						commands.Add(new DrawCommand()
+						{
+							type = DrawCommandType.SetGlobalInt,
+							propertyId = _baseVertexID,
+							intData = vtxOf + (int)drawCmd.VtxOffset
+						});
 
-						cmd.EnableScissorRect(new Rect(clip.x, fbSize.y - clip.w, clip.z - clip.x, clip.w - clip.y)); // Invert y.
-						cmd.DrawProceduralIndirect(_indexBuffer, Matrix4x4.identity, _material, -1,
-							MeshTopology.Triangles, _argumentsBuffer, argOf, _materialProperties);
+						//cmd.EnableScissorRect(new Rect(clip.x, fbSize.y - clip.w, clip.z - clip.x, clip.w - clip.y)); // Invert y.
+						commands.Add(new DrawCommand()
+						{
+							type = DrawCommandType.EnableScissorRect,
+							vectorData = new Vector4(clip.x, fbSize.y - clip.w, clip.z - clip.x, clip.w - clip.y)
+						});
+						
+						commands.Add(new DrawCommand()
+						{
+							type = DrawCommandType.DrawProcedural,
+							indexBuffer = _indexBuffer,
+							argumentsBuffer = _argumentsBuffer,
+							matrixA = Matrix4x4.identity,
+							materialData =  _material,
+							intData = argOf
+						});
+						//cmd.DrawProceduralIndirect(_indexBuffer, Matrix4x4.identity, _material, -1, MeshTopology.Triangles, _argumentsBuffer, argOf, _materialProperties);
 					}
 				}
 				vtxOf += drawList.VtxBuffer.Size;
 			}
-			cmd.DisableScissorRect();
+			
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.DisableScissorRect
+			});
 		}
 	}
 }

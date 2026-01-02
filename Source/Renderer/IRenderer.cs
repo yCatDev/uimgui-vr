@@ -1,5 +1,5 @@
-﻿using ImGuiNET;
-using UnityEngine.Rendering;
+﻿using System.Collections.Generic;
+using ImGuiNET;
 
 namespace UImGui.Renderer
 {
@@ -25,6 +25,6 @@ namespace UImGui.Renderer
 		/// </summary>
 		/// <param name="commandBuffer"></param>
 		/// <param name="drawData"></param>
-		void RenderDrawLists(CommandBuffer commandBuffer, ImDrawDataPtr drawData);
+		void RenderDrawLists(List<DrawCommand> commands, ImDrawDataPtr drawData);
 	}
 }

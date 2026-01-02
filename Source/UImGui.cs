@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using ImGuiNET;
+using NUnit.Framework;
 using UImGui.Assets;
 using UImGui.Events;
 using UImGui.Platform;
@@ -16,14 +18,7 @@ namespace UImGui
 		private Context _context;
 		private IRenderer _renderer;
 		private IPlatform _platform;
-		private CommandBuffer _renderCommandBuffer;
-
-		[SerializeField]
-		private Camera _camera = null;
-
-		[SerializeField]
-		private RenderImGui _renderFeature = null;
-
+		
 		[SerializeField]
 		private RenderType _rendererType = RenderType.Mesh;
 
@@ -79,17 +74,13 @@ namespace UImGui
 
 		[SerializeField]
 		private CursorShapesAsset _cursorShapes = null;
-
-		[SerializeField]
-		private bool _urpRenderGraphBypass = false;
-
+		
 		[SerializeField]
 		private bool _doGlobalEvents = true; // Do global/default Layout event too.
 
 		private bool _isChangingCamera = false;
 		private VRContext _vrContext;
-
-		public CommandBuffer CommandBuffer => _renderCommandBuffer;
+		
 
 		#region Events
 		public event System.Action<UImGui> Layout;
@@ -109,25 +100,7 @@ namespace UImGui
 			ImGuiIOPtr io = ImGui.GetIO();
 			_initialConfiguration.ApplyTo(io);
 		}
-
-		public void SetCamera(Camera camera)
-		{
-			if (camera == null)
-			{
-				enabled = false;
-				throw new System.Exception($"Fail: {camera} is null.");
-			}
-
-			if (camera == _camera)
-			{
-				Debug.LogWarning($"Trying to change to same camera. Camera: {camera}", camera);
-				return;
-			}
-
-			_camera = camera;
-			_isChangingCamera = true;
-		}
-
+		
 		private void Awake()
 		{
 			_context = UImGuiUtility.CreateContext();
@@ -141,30 +114,7 @@ namespace UImGui
 				enabled = false;
 				throw new System.Exception($"Failed to start: {reason}.");
 			}
-
-			if (_camera == null)
-			{
-				Fail(nameof(_camera));
-			}
-
-			if (!_urpRenderGraphBypass && _renderFeature == null && RenderUtility.IsUsingURP())
-			{
-				Fail(nameof(_renderFeature));
-			}
-
-			_renderCommandBuffer = RenderUtility.GetCommandBuffer(Constants.UImGuiCommandBuffer);
-
-			if (RenderUtility.IsUsingURP() && !_urpRenderGraphBypass)
-			{
-#if HAS_URP
-				_renderFeature.Camera = _camera;
-#endif
-				_renderFeature.CommandBuffer = _renderCommandBuffer;
-			}
-			else if (!RenderUtility.IsUsingHDRP())
-			{
-				_camera.AddCommandBuffer(CameraEvent.AfterEverything, _renderCommandBuffer);
-			}
+			
 
 			UImGuiUtility.SetCurrentContext(_context, _vrContext);
 
@@ -209,31 +159,6 @@ namespace UImGui
 			_context.TextureManager.Shutdown();
 			_context.TextureManager.DestroyFontAtlas(io);
 
-			if (RenderUtility.IsUsingURP())
-			{
-				if (_renderFeature != null)
-				{
-#if HAS_URP
-					_renderFeature.Camera = null;
-#endif
-					_renderFeature.CommandBuffer = null;
-				}
-			}
-			else if (!RenderUtility.IsUsingHDRP())
-			{
-				if (_camera != null)
-				{
-					_camera.RemoveCommandBuffer(CameraEvent.AfterEverything, _renderCommandBuffer);
-				}
-			}
-
-			if (_renderCommandBuffer != null)
-			{
-				RenderUtility.ReleaseCommandBuffer(_renderCommandBuffer);
-			}
-
-			_renderCommandBuffer = null;
-
 			if (_doGlobalEvents)
 			{
 				UImGuiUtility.DoOnDeinitialize(this);
@@ -245,17 +170,17 @@ namespace UImGui
 		{
 			if (RenderUtility.IsUsingHDRP())
 				return; // skip update call in hdrp
-			DoUpdate(this.CommandBuffer);
+			DoUpdate(_context.DrawCommands);
 		}
 
-		internal void DoUpdate(CommandBuffer buffer)
+		internal void DoUpdate(List<DrawCommand> commands)
 		{
 			UImGuiUtility.SetCurrentContext(_context, _vrContext);
 			ImGuiIOPtr io = ImGui.GetIO();
 
 			Constants.PrepareFrameMarker.Begin(this);
 			_context.TextureManager.PrepareFrame(io);
-			var rect = _camera.pixelRect;
+			var rect = new Rect(0, 0, Screen.width, Screen.height);
 			//rect.width *= io.DisplayFramebufferScale.x;
 			//rect.height *= io.DisplayFramebufferScale.y;
 			_platform.PrepareFrame(io, rect);
@@ -282,8 +207,8 @@ namespace UImGui
 			}
 
 			Constants.DrawListMarker.Begin(this);
-			_renderCommandBuffer.Clear();
-			_renderer.RenderDrawLists(buffer, ImGui.GetDrawData());
+			commands.Clear();
+			_renderer.RenderDrawLists(commands, ImGui.GetDrawData());
 			Constants.DrawListMarker.End();
 
 			if (_isChangingCamera)
@@ -306,25 +231,6 @@ namespace UImGui
 			_platform = platform;
 			_platform?.Initialize(io, _initialConfiguration, "Unity " + _platformType.ToString());
 		}
-
-		void Start()
-		{
-			if (_urpRenderGraphBypass)
-				RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
-		}
-
-		private void OnDestroy()
-		{
-			UImGuiUtility.DestroyContext(_context);
-			if (_urpRenderGraphBypass)
-				RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
-		}
-
-		private void OnEndCameraRendering(ScriptableRenderContext context, Camera cam)
-		{
-			if (cam != _camera)
-				return;
-			Graphics.ExecuteCommandBuffer(this.CommandBuffer);
-		}
+		
 	}
 }

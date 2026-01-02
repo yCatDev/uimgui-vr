@@ -1,4 +1,7 @@
-﻿using UnityEngine.Rendering;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.RenderGraphModule;
 #if HAS_URP
 using UnityEngine.Rendering.Universal;
 using UnityEngine;
@@ -7,45 +10,94 @@ using UnityEngine;
 namespace UImGui.Renderer
 {
 #if HAS_URP
-	public class RenderImGui : ScriptableRendererFeature
-	{
-		private class CommandBufferPass : ScriptableRenderPass
-		{
-			public CommandBuffer commandBuffer;
+    public class RenderImGui : ScriptableRendererFeature
+    {
+        
+        private class CommandBufferPass : ScriptableRenderPass
+        {
+            private readonly PassData _passData;
 
-			public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
-			{
-				context.ExecuteCommandBuffer(commandBuffer);
-			}
-		}
+            private class PassData
+            {
+                public List<DrawCommand> Commands;
+                
+                public void Setup(List<DrawCommand> commands)
+                {
+                    Commands = commands;
+                }
+            }
 
-		[HideInInspector]
-		public Camera Camera;
-		public CommandBuffer CommandBuffer;
-		public RenderPassEvent RenderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+            public CommandBufferPass()
+            {
+                _passData = new PassData();
+            }
+            
+            public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+            {
+                var commandBuffer = CommandBufferPool.Get("Dear ImGUI");
+                
+                DrawCommandUtils.BuildCommandBuffer(ref commandBuffer, UImGuiUtility.Context.DrawCommands);
+                
+                context.ExecuteCommandBuffer(commandBuffer);
+                CommandBufferPool.Release(commandBuffer);
+            }
 
-		private CommandBufferPass _commandBufferPass;
+            public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+            {
+                var resourceData = frameData.Get<UniversalResourceData>();
+                var commands = UImGuiUtility.Context.DrawCommands;
+                
+                using (var builder =
+                       renderGraph.AddRasterRenderPass<PassData>("ImGui Render Pass", out var passData))
+                {
+                    DrawCommandUtils.PrepareForRenderGraph(builder, renderGraph, commands);
+                    
+                    passData.Setup(commands);
+                    
+                    builder.AllowGlobalStateModification(true);
+                    builder.SetRenderAttachment(resourceData.activeColorTexture, 0);
+                    builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture);
+                    
+                    builder.AllowPassCulling(commands.Count == 0);
+                    
+                    builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
+                    {
+                        ExecuteImGuiPass(data, context);
+                    });
+                }
+            }
 
-		public override void Create()
-		{
-			_commandBufferPass = new CommandBufferPass()
-			{
-				commandBuffer = CommandBuffer,
-				renderPassEvent = RenderPassEvent,
-			};
-		}
+            private void ExecuteImGuiPass(PassData data, RasterGraphContext context)
+            {
+                var cmd = context.cmd;
+                
+                DrawCommandUtils.BuildCommandBuffer(ref cmd, data.Commands);
+            }
+        }
 
-		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
-		{
-			if (CommandBuffer == null) return;
-			if (Camera != renderingData.cameraData.camera) return;
+        public RenderPassEvent RenderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
 
-			_commandBufferPass.renderPassEvent = RenderPassEvent;
-			_commandBufferPass.commandBuffer = CommandBuffer;
+        private CommandBufferPass _commandBufferPass;
 
-			renderer.EnqueuePass(_commandBufferPass);
-		}
-	}
+        public override void Create()
+        {
+            _commandBufferPass = new CommandBufferPass()
+            {
+                renderPassEvent = RenderPassEvent,
+            };
+        }
+
+        public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+        {
+            if (ReferenceEquals(UImGuiUtility.Context, null)) return;
+            if (ReferenceEquals(UImGuiUtility.Context.DrawCommands, null)) return;
+            if (renderingData.cameraData.cameraType is not (CameraType.Game or CameraType.SceneView)) return;
+
+            _commandBufferPass.renderPassEvent = RenderPassEvent;
+
+            renderer.EnqueuePass(_commandBufferPass);
+        }
+    }
 #else
 	public class RenderImGui : UnityEngine.ScriptableObject
 	{

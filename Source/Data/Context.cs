@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using UImGui.Renderer;
 using UImGui.Texture;
 
 namespace UImGui
@@ -9,5 +11,6 @@ namespace UImGui
 		public IntPtr ImNodesContext;
 		public IntPtr ImPlotContext;
 		public TextureManager TextureManager;
+		public List<DrawCommand> DrawCommands;
 	}
 }

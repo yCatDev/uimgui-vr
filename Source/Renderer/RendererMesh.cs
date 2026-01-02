@@ -36,8 +36,7 @@ namespace UImGui.Renderer
 		private readonly Shader _shader;
 		private readonly int _textureID;
 		private readonly TextureManager _textureManager;
-		private readonly MaterialPropertyBlock _materialProperties;
-
+		
 		private int _prevSubMeshCount = 1;  // number of sub meshes used previously
 
 		public RendererMesh(ShaderResourcesAsset resources, TextureManager texManager)
@@ -45,7 +44,6 @@ namespace UImGui.Renderer
 			_shader = resources.Shader.Mesh;
 			_textureManager = texManager;
 			_textureID = Shader.PropertyToID(resources.PropertyNames.Texture);
-			_materialProperties = new MaterialPropertyBlock();
 		}
 
 		public void Initialize(ImGuiIOPtr io)
@@ -83,7 +81,7 @@ namespace UImGui.Renderer
 			}
 		}
 
-		public void RenderDrawLists(CommandBuffer commandBuffer, ImDrawDataPtr drawData)
+		public void RenderDrawLists(List<DrawCommand> commands, ImDrawDataPtr drawData)
 		{
 			Vector2 fbOSize = drawData.DisplaySize * drawData.FramebufferScale;
 
@@ -94,13 +92,23 @@ namespace UImGui.Renderer
 			UpdateMesh(drawData);
 			Constants.UpdateMeshMarker.End();
 
-			commandBuffer.BeginSample(Constants.ExecuteDrawCommandsMarker);
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.BeginSample,
+				stringData = Constants.ExecuteDrawCommandsMarker
+			});
+			//commandBuffer.BeginSample(Constants.ExecuteDrawCommandsMarker);
 			Constants.CreateDrawCommandsMarker.Begin();
 
-			CreateDrawCommands(commandBuffer, drawData, fbOSize);
+			CreateDrawCommands(commands, drawData, fbOSize);
 
 			Constants.CreateDrawCommandsMarker.End();
-			commandBuffer.EndSample(Constants.ExecuteDrawCommandsMarker);
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.EndSample,
+				stringData = Constants.ExecuteDrawCommandsMarker
+			});
+			//commandBuffer.EndSample(Constants.ExecuteDrawCommandsMarker);
 		}
 
 		private void UpdateMesh(ImDrawDataPtr drawData)
@@ -171,7 +179,7 @@ namespace UImGui.Renderer
 			_mesh.UploadMeshData(false);
 		}
 
-		private void CreateDrawCommands(CommandBuffer commandBuffer, ImDrawDataPtr drawData, Vector2 fbSize)
+		private void CreateDrawCommands(List<DrawCommand> commands, ImDrawDataPtr drawData, Vector2 fbSize)
 		{
 			IntPtr prevTextureId = IntPtr.Zero;
 			Vector4 clipOffset = new Vector4(drawData.DisplayPos.x, drawData.DisplayPos.y,
@@ -179,10 +187,22 @@ namespace UImGui.Renderer
 			Vector4 clipScale = new Vector4(drawData.FramebufferScale.x, drawData.FramebufferScale.y,
 				drawData.FramebufferScale.x, drawData.FramebufferScale.y);
 
-			commandBuffer.SetViewport(new Rect(0f, 0f, fbSize.x, fbSize.y));
-			commandBuffer.SetViewProjectionMatrices(
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.SetViewport,
+				vectorData = new Vector4(0f, 0f, fbSize.x, fbSize.y)
+			});
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.SetViewProjectionMatrices,
+				matrixA = Matrix4x4.Translate(new Vector3(0.5f / fbSize.x, 0.5f / fbSize.y, 0f)), // Small adjustment to improve text.
+				matrixB = Matrix4x4.Ortho(0f, fbSize.x, fbSize.y, 0f, 0f, 1f)
+			});
+			//commandBuffer.SetViewport(new Rect(0f, 0f, fbSize.x, fbSize.y));
+			/*commandBuffer.SetViewProjectionMatrices(
 				Matrix4x4.Translate(new Vector3(0.5f / fbSize.x, 0.5f / fbSize.y, 0f)), // Small adjustment to improve text.
-				Matrix4x4.Ortho(0f, fbSize.x, fbSize.y, 0f, 0f, 1f));
+				Matrix4x4.Ortho(0f, fbSize.x, fbSize.y, 0f, 0f, 1f));*/
+			
 
 			int subOf = 0;
 			for (int n = 0, nMax = drawData.CmdListsCount; n < nMax; ++n)
@@ -212,15 +232,38 @@ namespace UImGui.Renderer
 							bool hasTexture = _textureManager.TryGetTexture(prevTextureId, out UnityEngine.Texture texture);
 							Assert.IsTrue(hasTexture, $"Texture {prevTextureId} does not exist. Try to use UImGuiUtility.GetTextureID().");
 
-							_materialProperties.SetTexture(_textureID, texture);
+							commands.Add(new DrawCommand()
+							{
+								type = DrawCommandType.SetGlobalTexture,
+								propertyId = _textureID,
+								textureData = texture
+							});
 						}
 
-						commandBuffer.EnableScissorRect(new Rect(clip.x, fbSize.y - clip.w, clip.z - clip.x, clip.w - clip.y)); // Invert y.
-						commandBuffer.DrawMesh(_mesh, Matrix4x4.identity, _material, subOf, -1, _materialProperties);
+						commands.Add(new DrawCommand()
+						{
+							 type = DrawCommandType.EnableScissorRect,
+							 vectorData = new Vector4(clip.x, fbSize.y - clip.w, clip.z - clip.x, clip.w - clip.y)
+						});
+						commands.Add(new DrawCommand()
+						{
+							type = DrawCommandType.DrawMesh,
+							meshData = _mesh,
+							matrixA = Matrix4x4.identity,
+							materialData = _material,
+							intData = subOf,
+						});
+						//commandBuffer.EnableScissorRect(new Rect(clip.x, fbSize.y - clip.w, clip.z - clip.x, clip.w - clip.y)); // Invert y.
+						//commandBuffer.DrawMesh(_mesh, Matrix4x4.identity, _material, subOf, -1, _materialProperties);
 					}
 				}
 			}
-			commandBuffer.DisableScissorRect();
+			
+			commands.Add(new DrawCommand()
+			{
+				type = DrawCommandType.DisableScissorRect
+			});
+			//commandBuffer.DisableScissorRect();
 		}
 	}
 }
