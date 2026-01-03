@@ -85,6 +85,19 @@ namespace UImGui
 		public event System.Action<UImGui> Layout;
 		public event System.Action<UImGui> OnInitialize;
 		public event System.Action<UImGui> OnDeinitialize;
+
+		public RenderType RendererType
+		{
+			get => _rendererType;
+			set => _rendererType = value;
+		}
+
+		public InputType PlatformType
+		{
+			get => _platformType;
+			set => _platformType = value;
+		}
+
 		#endregion
 
 		public void Reload()

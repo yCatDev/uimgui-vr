@@ -1,9 +1,11 @@
 ﻿using ImGuiNET;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UImGui.Renderer;
 using UImGui.Texture;
 using UImGui.VR;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UTexture = UnityEngine.Texture;
 
@@ -18,6 +20,18 @@ namespace UImGui
 		internal static VRContext VRContext;
 
 		#region Events
+
+		[RuntimeInitializeOnLoadMethod]
+		private static void ResetStatic()
+		{
+			Context = null;
+			VRContext = null;
+			
+			Layout = null;
+			OnInitialize = null;
+			OnDeinitialize = null;
+		}
+		
 		public static event Action<UImGui> Layout;
 		public static event Action<UImGui> OnInitialize;
 		public static event Action<UImGui> OnDeinitialize;

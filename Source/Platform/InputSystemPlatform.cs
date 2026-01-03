@@ -287,7 +287,9 @@ namespace UImGui.Platform
             {
                 UpdateKeyboard(io, Keyboard.current);
                 UpdateMouse(io, Mouse.current);
+#if !UNITY_EDITOR
                 UpdateTouchscreen(io, Touchscreen.current);
+#endif
                 UpdateCursor(io, ImGui.GetMouseCursor());
                 UpdateGamepad(io, Gamepad.current);
             }
