@@ -1,5 +1,7 @@
 # UImGui Extended
 
+![vr-mode-demo](.Documentation\vrmode.avif)
+
 This is a fork of the UImGui project by [psydack](https://github.com/psydack/uimgui) with several improvements I've made for my own needs and which I may continue to develop in the future.
 
 ## Key Differences from Original UImGui
@@ -53,6 +55,25 @@ This project is based on the [RG.ImGui](https://github.com/realgamessoftware/dea
 - **For Built-in RP**: See [Using Built-in](#using-built-in) section
 - **For VR Mode**: Add the `ImGUI-VRBase` prefab from the `Prefabs` folder to your scene and assign your Tracking Origin object to the `Tracking Space` field (typically the object containing the camera, e.g., `Camera Offset` or `XR Origin Hands (XR Rig)`)
 - You're ready! Check the [Samples section](#samples) for usage examples
+
+## VR Mode Input Bindings
+
+To enter\exit VR mode, hold down the Thumbstick on either controller for 3 seconds. This can be changed in the `SimpleImGUIActivator` script located in the `ImGUI-VRBase` prefab on the `Activator` object.
+
+In the UImGui script, if you set `Render Type` to `VR Mesh` and `Platform Type` to `VR Input`, a new VR mode settings block will appear. Here you can specify which controller acts as the cursor using the `Hand Cursor Mode` parameter. 
+
+Currently, VR mode is designed so that the controllers share two roles between them: Cursor and Navigator. The cursor is the controller specified in `Hand Cursor Mode`, which emulates the mouse:
+
+* Raycast position - Mouse Position
+* Trigger - Mouse Left Click
+* Grab/Grip - Mouse Right Click
+* Thumbstick - UI Scroll
+
+The second controller acts as the navigator and emulates a gamepad:
+
+* Thumbstick - Directional navigation (same as Thumbstick/DPad on a real gamepad)
+* Primary button - A / Cross button on a real gamepad
+* Secondary button - B / Circle button on a real gamepad
 
 ### Building Dear ImGui
 
