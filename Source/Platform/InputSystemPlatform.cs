@@ -56,6 +56,32 @@ namespace UImGui.Platform
             io.MouseDown[1] = mouse.rightButton.isPressed;
             io.MouseDown[2] = mouse.middleButton.isPressed;
         }
+        
+        private static void UpdateTouchscreen(ImGuiIOPtr io, Touchscreen touchscreen)
+        {
+            if (touchscreen == null)
+            {
+                return;
+            }
+
+            if (touchscreen.touches.Count == 0)
+                return;
+
+            var activeTouch = touchscreen.touches[0];
+            io.MousePos = Utils.ScreenToImGui(activeTouch.position.ReadValue());
+            
+            io.MouseWheel = 0;
+            io.MouseWheelH = 0;
+            
+            var touchPhase = activeTouch.phase.ReadValue(); 
+            bool pressed = touchPhase == UnityEngine.InputSystem.TouchPhase.Began ||
+                           touchPhase == UnityEngine.InputSystem.TouchPhase.Moved ||
+                           touchPhase == UnityEngine.InputSystem.TouchPhase.Stationary;
+
+            io.MouseDown[0] = pressed;
+            io.MouseDown[1] = pressed && touchscreen.touches.Count > 1;
+            io.MouseDown[2] = false;
+        }
 
         private static void UpdateGamepad(ImGuiIOPtr io, Gamepad gamepad)
         {
@@ -261,6 +287,7 @@ namespace UImGui.Platform
             {
                 UpdateKeyboard(io, Keyboard.current);
                 UpdateMouse(io, Mouse.current);
+                UpdateTouchscreen(io, Touchscreen.current);
                 UpdateCursor(io, ImGui.GetMouseCursor());
                 UpdateGamepad(io, Gamepad.current);
             }

@@ -106,7 +106,8 @@ namespace UImGui
 		private void Awake()
 		{
 			_context = UImGuiUtility.CreateContext();
-			_vrContext = UImGuiUtility.CreateVRContext(_vrConfiguration);
+			if (_rendererType == RenderType.VRMesh || _platformType == InputType.VRInput)
+				_vrContext = UImGuiUtility.CreateVRContext(_vrConfiguration);
 		}
 
 		private void OnEnable()
