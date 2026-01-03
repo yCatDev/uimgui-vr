@@ -24,9 +24,9 @@ namespace UImGui.Editor
         private SerializedProperty _vrConfiguration;
         private readonly StringBuilder _messages = new StringBuilder();
 
-        private bool usingImNodes = true;
+        /*private bool usingImNodes = true;
         private bool usingImGuizmo = true;
-        private bool usingImPlot = true;
+        private bool usingImPlot = true;*/
 
         public override void OnInspectorGUI()
         {  
@@ -111,7 +111,7 @@ namespace UImGui.Editor
             _cursorShapes = serializedObject.FindProperty("_cursorShapes");
             _vrConfiguration = serializedObject.FindProperty("_vrConfiguration");
 
-#if UIMGUI_REMOVE_IMNODES
+/*#if UIMGUI_REMOVE_IMNODES
             usingImNodes = false;
 #endif
 #if UIMGUI_REMOVE_IMGUIZMO
@@ -119,20 +119,14 @@ namespace UImGui.Editor
 #endif
 #if UIMGUI_REMOVE_IMPLOT
             usingImPlot = false;
-#endif
+#endif*/
         }
 
         private void CheckRequirements()
         {
             var textImGui = $"ImGUI: {ImGui.GetVersion()}";
-            var textImNodes = $"ImNodes: {(usingImNodes ? "0.4 - 2021-07-09" : "disabled")}";
-            var textImGuizmo = $"ImGuizmo: {(usingImGuizmo ? "?? - 2021-07-09" : "disabled")}";
-            var textImPlot = $"ImPlot: {(usingImPlot ? "0.10 - 2021-07-09" : "disabled")}";
 
             EditorGUILayout.LabelField(textImGui);
-            EditorGUILayout.LabelField(textImNodes);
-            EditorGUILayout.LabelField(textImGuizmo);
-            EditorGUILayout.LabelField(textImPlot);
             EditorGUILayout.Space();
 
             _messages.Clear();
