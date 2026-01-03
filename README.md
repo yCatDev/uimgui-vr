@@ -2,7 +2,7 @@
 
 ![vr-mode-demo](.Documentation/vrmode.avif)
 
-This is a fork of the UImGui project by [psydack](https://github.com/psydack/uimgui) with several improvements I've made for my own needs and which I may continue to develop in the future.
+This is a fork of the UImGui project by [psydack](https://github.com/psydack/uimgui) with several improvements I've made for my own needs and which I may continue to develop in the future. Tested on Unity 6 LTS and Unity 2022 LTS.
 
 ## Key Differences from Original UImGui
 
@@ -15,7 +15,6 @@ This is a fork of the UImGui project by [psydack](https://github.com/psydack/uim
 
 ## What Needs Testing
 
-- Compatibility with Unity 2022.3 (tested on Unity 6)
 - Built-in RP and HDRP functionality
 - macOS / Apple Silicon compatibility
 - Performance impact
@@ -24,6 +23,7 @@ This is a fork of the UImGui project by [psydack](https://github.com/psydack/uim
 
 - Ability to zoom in/out on windows in VR space
 - Better head following and positioning for VR mode
+– Ability to pin text-only informational windows so they remain visible even after exiting VR mode.
 - More precise control over element sizing
 - Improved GUI activation architecture and UImGUI.cs script workflow
 - iOS build support
@@ -74,6 +74,10 @@ The second controller acts as the navigator and emulates a gamepad:
 * Thumbstick - Directional navigation (same as Thumbstick/DPad on a real gamepad)
 * Primary button - A / Cross button on a real gamepad
 * Secondary button - B / Circle button on a real gamepad
+
+When using ImGUI-VRBase, there is also an option to activate ImGUI in the Editor while not in VR mode. This is useful for performing quick actions without wearing a headset.
+
+By default, you need to hold the **~** key on your keyboard to activate it, but this can be changed in the `SimpleImGUIActivator` script.
 
 ### Building Dear ImGui
 
