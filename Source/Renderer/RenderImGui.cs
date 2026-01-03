@@ -75,6 +75,13 @@ namespace UImGui.Renderer
             }
         }
 
+        [Serializable]
+        public class Settings
+        {
+            public bool drawInSceneView;
+        }
+
+        public Settings settings;
         public RenderPassEvent RenderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
 
         private CommandBufferPass _commandBufferPass;
@@ -91,8 +98,9 @@ namespace UImGui.Renderer
         {
             if (ReferenceEquals(UImGuiUtility.Context, null)) return;
             if (ReferenceEquals(UImGuiUtility.Context.DrawCommands, null)) return;
-            if (renderingData.cameraData.cameraType is not (CameraType.Game or CameraType.SceneView)) return;
-
+            if (renderingData.cameraData.cameraType != CameraType.Game && (!settings.drawInSceneView ||
+                                                                           renderingData.cameraData.cameraType !=
+                                                                           CameraType.SceneView)) return;
             _commandBufferPass.renderPassEvent = RenderPassEvent;
 
             renderer.EnqueuePass(_commandBufferPass);

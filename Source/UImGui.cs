@@ -1,14 +1,11 @@
 using System.Collections.Generic;
 using ImGuiNET;
-using NUnit.Framework;
 using UImGui.Assets;
 using UImGui.Events;
 using UImGui.Platform;
 using UImGui.Renderer;
-using UImGui.Texture;
 using UImGui.VR;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace UImGui
 {
