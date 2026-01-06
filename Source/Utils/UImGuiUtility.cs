@@ -20,17 +20,6 @@ namespace UImGui
 		internal static VRContext VRContext;
 
 		#region Events
-
-		[RuntimeInitializeOnLoadMethod]
-		private static void ResetStatic()
-		{
-			Context = null;
-			VRContext = null;
-			
-			Layout = null;
-			OnInitialize = null;
-			OnDeinitialize = null;
-		}
 		
 		public static event Action<UImGui> Layout;
 		public static event Action<UImGui> OnInitialize;
@@ -94,6 +83,16 @@ namespace UImGui
 #endif*/
 
 			VRContext = vrContext;
+		}
+		
+		public static void ResetStaticContext()
+		{
+			Context = null;
+			VRContext = null;
+
+			Layout = null;
+			OnInitialize = null;
+			OnDeinitialize = null;
 		}
 	}
 }

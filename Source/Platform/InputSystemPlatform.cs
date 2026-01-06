@@ -127,10 +127,11 @@ namespace UImGui.Platform
 
         private void SetupKeyboard(Keyboard keyboard)
         {
+            if (keyboard == null)
+                return;
+            
             if (_keyboard != null)
-            {
                 _keyboard.onTextInput -= _textInput.Add;
-            }
 
             _keyboard = keyboard;
             _keyControls.Clear();

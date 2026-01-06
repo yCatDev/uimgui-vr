@@ -23,7 +23,8 @@ namespace UImGui.Renderer
         DrawRenderer,
         DrawProcedural,
         ClearDepth,
-        EnableKeyword
+        EnableKeyword,
+        DisableKeyword
     }
 
     public struct DrawCommand
@@ -103,6 +104,9 @@ namespace UImGui.Renderer
                     case DrawCommandType.EnableKeyword:
                         commandBuffer.EnableKeyword(command.materialData, command.keyword);
                         break;
+                    case DrawCommandType.DisableKeyword:
+                        commandBuffer.DisableKeyword(command.materialData, command.keyword);
+                        break;
                 }
             }
         }
@@ -157,6 +161,12 @@ namespace UImGui.Renderer
                         break;
                     case DrawCommandType.ClearDepth:
                         commandBuffer.ClearRenderTarget(true, false, Color.clear);
+                        break;
+                    case DrawCommandType.EnableKeyword:
+                        commandBuffer.EnableKeyword(command.materialData, command.keyword);
+                        break;
+                    case DrawCommandType.DisableKeyword:
+                        commandBuffer.DisableKeyword(command.materialData, command.keyword);
                         break;
                 }
             }

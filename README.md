@@ -54,7 +54,7 @@ This project is based on the [RG.ImGui](https://github.com/realgamessoftware/dea
 - **For URP**: See [Using URP](#using-urp) section
 - **For HDRP**: See [Using HDRP](#using-hdrp) section
 - **For Built-in RP**: See [Using Built-in](#using-built-in) section
-- **For VR Mode**: Add the `ImGUI-VRBase` prefab from the `Prefabs` folder to your scene. For more info see `VR Mode Input Bindings` below 
+- **For VR Mode**: Add the `ImGUI-VRBase` prefab from the `Prefabs` folder to your scene. For more info see `VR Mode Input Bindings` below. Also you need to add `ShowDemoWindow` script somewhere on your scene, if you still do not have own ImGui code and want just to test it.
 - You're ready! Check the [Samples section](#samples) for usage examples
 
 ## VR Mode Input Bindings

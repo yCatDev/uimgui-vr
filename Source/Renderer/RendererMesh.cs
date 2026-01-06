@@ -38,12 +38,14 @@ namespace UImGui.Renderer
 		private readonly TextureManager _textureManager;
 		
 		private int _prevSubMeshCount = 1;  // number of sub meshes used previously
+		private readonly LocalKeyword _clipRectKeyword;
 
 		public RendererMesh(ShaderResourcesAsset resources, TextureManager texManager)
 		{
 			_shader = resources.Shader.Mesh;
 			_textureManager = texManager;
 			_textureID = Shader.PropertyToID(resources.PropertyNames.Texture);
+			_clipRectKeyword = new LocalKeyword(resources.Shader.Mesh, resources.PropertyNames.ClipRectKeyword);
 		}
 
 		public void Initialize(ImGuiIOPtr io)
@@ -239,6 +241,12 @@ namespace UImGui.Renderer
 								textureData = texture
 							});
 						}
+						commands.Add(new DrawCommand()
+						{
+							type = DrawCommandType.DisableKeyword,
+							materialData = _material,
+							keyword = _clipRectKeyword
+						});
 
 						commands.Add(new DrawCommand()
 						{
